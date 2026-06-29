@@ -1,0 +1,71 @@
+on:
+  push:
+    branches:
+      - '*'
+      - '!main'
+  pull_request:
+    types:
+      - closed
+
+
+jobs:
+  upload_tf_vars:
+    name: 'Upload tfvars to Artifact'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+
+      - name: Upload tfvars
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfvars
+          path: 'test.tfvars.json'
+
+
+  plan:
+    if: (github.event.pull_request.merged && github.base_ref == 'main') && github.repository != 'Tanchwa/infrastructure-deployment-template'
+    name: 'Terraform Plan'
+    uses: Tanchwa/workflows-terraform-deployment/.github/workflows/terraform_plan.yaml@main
+    needs: upload_tf_vars
+    secrets:
+      EXAMPLE_SECRET: ${{ secrets.EXAMPLE_SECRET }} #`pragma: allowlist secret`
+      EXAMPLE_SECRET_2: ${{ secrets.EXAMPLE_SECRET_2 }} #`pragma: allowlist secret`
+      EXAMPLE_SECRET_3: ${{ secrets.EXAMPLE_SECRET_3 }} #`pragma: allowlist secret`
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }} #`pragma: allowlist secret`
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    with:
+      terraform_version: "1.12"
+      working_directory: "."
+      tf_vars_artifact: "tfvars"
+      tf_vars_filename: "test.tfvars.json"
+      environment: "test"
+
+  apply:
+    if: (github.event.pull_request.merged && github.base_ref == 'main') && github.repository != 'Tanchwa/infrastructure-deployment-template'
+    needs:
+      - plan
+      - upload_tf_vars
+    name: 'Terraform Apply'
+    uses: Tanchwa/workflows-terraform-deployment/.github/workflows/terraform_apply.yaml@main
+    secrets:
+      EXAMPLE_SECRET: ${{ secrets.EXAMPLE_SECRET }} #`pragma: allowlist secret`
+      EXAMPLE_SECRET_2: ${{ secrets.EXAMPLE_SECRET_2 }} #`pragma: allowlist secret`
+      EXAMPLE_SECRET_3: ${{ secrets.EXAMPLE_SECRET_3 }} #`pragma: allowlist secret`
+      INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }} #`pragma: allowlist secret`
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    with:
+      terraform_version: "1.12"
+      working_directory: "."
+      tf_vars_artifact: "tfvars"
+      tf_vars_filename: "test.tfvars.json"
+      environment: "test"

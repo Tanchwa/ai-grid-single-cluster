@@ -1,0 +1,5 @@
+contexts:
+  admin@test-single:
+    ca: dGVzdA==
+    crt: dGVzdA==
+    key: dGVzdA==

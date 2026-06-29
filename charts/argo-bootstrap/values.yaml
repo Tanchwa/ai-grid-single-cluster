@@ -1,0 +1,8 @@
+githubRepositoryName: ""
+githubApplicationId: ""
+githubApplicationInstallationId: ""
+githubApplicationPrivateKey: ""
+
+letsencryptEmail: ""
+route53ZoneId: ""
+argocdDomain: ""

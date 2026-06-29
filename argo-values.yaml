@@ -1,0 +1,17 @@
+server:
+  # TLS certificate is provisioned by cert-manager; ArgoCD serves HTTPS directly.
+  # Domain and issuer ref are injected by Terraform via argo-values-dex.yaml.tftpl.
+  certificate:
+    enabled: true
+    issuer:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: letsencrypt-prod
+    secretName: argocd-server-tls # pragma: allowlist secret
+
+  ingress:
+    enabled: false
+
+configs:
+  params:
+    server.insecure: "false"

@@ -1,0 +1,19 @@
+machine:
+    type: worker
+    kernel:
+        modules:
+            # NVIDIA kernel modules — requires a Talos image built with the
+            # nvidia-gpu-support system extension via image factory
+            - name: nvidia
+            - name: nvidia_uvm
+            - name: nvidia_drm
+            - name: nvidia_modeset
+            - name: nvidia_peermem
+   # TODO look up how to add volumes properly, this way is failing terraform
+   # volumes:
+   #     - name: LONGHORN
+   #       provisioning:
+   #           diskSelector:
+   #               size: ">= 100GiB" # adjust to match your Longhorn data disk
+   #           maxSize: "2TiB"
+   #       mountpoint: /var/lib/longhorn

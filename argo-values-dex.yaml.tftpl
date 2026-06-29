@@ -1,0 +1,25 @@
+server:
+  certificate:
+    domain: "argocd.${domain_name}"
+
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      service.beta.kubernetes.io/aws-load-balancer-subnets: "${public_subnets}"
+      external-dns.alpha.kubernetes.io/hostname: "argocd.${domain_name}"
+    servicePortHttps: 443
+
+configs:
+  cm:
+    dex.config: |
+      connectors:
+        - type: oidc
+          id: aws-oidc
+          name: AWS
+          config:
+            issuer: ${argocd_oidc_issuer}
+            clientID: ${argocd_oidc_client_id}
+            clientSecret: $dex.oidcClientSecret
