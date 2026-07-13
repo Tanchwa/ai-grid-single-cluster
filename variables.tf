@@ -97,3 +97,9 @@ variable "github_application_private_key" {
   type        = string
   sensitive   = true
 }
+
+variable "tailscale_auth_key" {
+  description = "Tailscale auth key (reusable, ephemeral, or pre-authorized) used to join the gateway EC2 instance to your tailnet."
+  type        = string
+  sensitive   = true
+}
