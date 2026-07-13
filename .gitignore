@@ -18,5 +18,5 @@
 terraform.rc
 
 # Ignore Terraform state files
-.tfstate
-.tfstate.*
+*.tfstate
+*.tfstate.*

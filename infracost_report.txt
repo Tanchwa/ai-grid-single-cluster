@@ -1,0 +1,115 @@
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                                                                                      │
+│   Scan Summary                                                                                                       │
+│                                                                                                                      │
+│   Resources:     98 (21 costed, 77 free)                                                                             │
+│   Monthly cost:  $194                                                                                                │
+│                                                                                                                      │
+│   FinOps:        12 (⚠️ x1)                                                                                          │
+│   Tagging:       1 (⚠️ x1)                                                                                           │
+│   Guardrails:    0                                                                                                   │
+│   Budgets:       0                                                                                                   │
+│                                                                                                                      │
+│   ⚠️  = failing policy                                                                                               │
+│                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+module.cluster_worker_nodes.aws_autoscaling_group.workers[0]                                         1           $52
+module.vpc.aws_nat_gateway.this[0]                                                                   1           $41
+module.cluster_controlplane_nodes.aws_instance.control_plane[0]                                      1           $28
+module.cluster_controlplane_nodes.aws_instance.control_plane[1]                                      1           $28
+module.cluster_controlplane_nodes.aws_instance.control_plane[2]                                      1           $28
+aws_lb.k8s_api                                                                                       1           $16
+aws_kms_key.this                                                                                     1            $1
+aws_route53_zone.this                                                                                1            $1
+module.vpc.aws_route.private_nat_gateway[0]                                                          1            $0
+module.cluster_worker_nodes.aws_security_group.nodes                                                 1            $0
+aws_lb_target_group_attachment.k8s_api["0"]                                                          1            $0
+aws_lb_target_group_attachment.k8s_api["1"]                                                          1            $0
+aws_lb_target_group_attachment.k8s_api["2"]                                                          1            $0
+aws_route53_hosted_zone_dnssec.this                                                                  1            $0
+aws_route53_key_signing_key.this                                                                     1            $0
+aws_route53_query_log.this                                                                           1            $0
+aws_s3_bucket_ownership_controls.lb_logs                                                             1            $0
+aws_s3_bucket_public_access_block.lb_logs                                                            1            $0
+aws_s3_bucket_public_access_block.oidc                                                               1            $0
+aws_s3_bucket_server_side_encryption_configuration.lb_logs                                           1            $0
+aws_s3_object.oidc_discovery                                                                         1            $0
+aws_s3_object.oidc_jwks                                                                              1            $0
+module.cluster_controlplane_nodes.aws_iam_instance_profile.nodes[0]                                  1            $0
+module.cluster_controlplane_nodes.aws_iam_role.external_dns[0]                                       1            $0
+module.cluster_controlplane_nodes.aws_iam_role.lb_controller[0]                                      1            $0
+module.cluster_controlplane_nodes.aws_iam_role.nodes[0]                                              1            $0
+module.cluster_controlplane_nodes.aws_iam_role_policy.external_dns[0]                                1            $0
+module.cluster_controlplane_nodes.aws_iam_role_policy.lb_controller[0]                               1            $0
+module.cluster_controlplane_nodes.aws_iam_role_policy.node_ec2_describe[0]                           1            $0
+module.cluster_controlplane_nodes.aws_iam_role_policy.node_ecr[0]                                    1            $0
+module.cluster_controlplane_nodes.aws_security_group.nodes                                           1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_egress_rule.all                             1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.cilium_health                  1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.cilium_metrics                 1            $0
+module.vpc.aws_route_table_association.private[0]                                                    1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.hubble_relay                   1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.hubble_server                  1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.icmp                           1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.kube_api["10.0.0.0/16"]        1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.kubelet                        1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.nodeport_tcp                   1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.nodeport_udp                   1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.self_all                       1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.talos_apid["10.0.0.0/16"]      1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.talos_trustd                   1            $0
+module.vpc.aws_default_network_acl.this[0]                                                           1            $0
+module.vpc.aws_default_route_table.default[0]                                                        1            $0
+module.vpc.aws_internet_gateway.this[0]                                                              1            $0
+aws_iam_role_policy.cert_manager                                                                     1            $0
+module.vpc.aws_route.public_internet_gateway[0]                                                      1            $0
+module.vpc.aws_route_table.private[0]                                                                1            $0
+module.vpc.aws_route_table.public[0]                                                                 1            $0
+module.cluster_controlplane_nodes.aws_vpc_security_group_ingress_rule.etcd[0]                        1            $0
+aws_lb_target_group.k8s_api                                                                          1            $0
+module.cluster_worker_nodes.aws_iam_instance_profile.nodes[0]                                        1            $0
+module.vpc.aws_route_table_association.public[0]                                                     1            $0
+module.vpc.aws_route_table_association.public[1]                                                     1            $0
+module.vpc.aws_route_table_association.public[2]                                                     1            $0
+module.vpc.aws_route_table_association.private[2]                                                    1            $0
+module.cluster_worker_nodes.aws_iam_role.nodes[0]                                                    1            $0
+module.cluster_worker_nodes.aws_iam_role_policy.node_ec2_describe[0]                                 1            $0
+module.cluster_worker_nodes.aws_iam_role_policy.node_ecr[0]                                          1            $0
+module.vpc.aws_route_table_association.private[1]                                                    1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_egress_rule.all                                   1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.cilium_health                        1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.cilium_metrics                       1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.hubble_relay                         1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.hubble_server                        1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.icmp                                 1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.kubelet                              1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.nodeport_tcp                         1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.nodeport_udp                         1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.peer_all["0"]                        1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.self_all                             1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.talos_apid["10.0.0.0/16"]            1            $0
+module.cluster_worker_nodes.aws_vpc_security_group_ingress_rule.talos_trustd                         1            $0
+module.vpc.aws_default_security_group.this[0]                                                        1            $0
+module.vpc.aws_eip.nat[0]                                                                            1            $0
+module.cluster_controlplane_nodes.aws_launch_template.this                                           1            $0
+module.cluster_worker_nodes.aws_launch_template.this                                                 1            $0
+aws_iam_role.cert_manager                                                                            1            $0
+aws_lb_listener.k8s_api                                                                              1            $0
+module.vpc.aws_subnet.private[0]                                                                     1            $0
+module.vpc.aws_subnet.private[1]                                                                     1            $0
+module.vpc.aws_subnet.private[2]                                                                     1            $0
+module.vpc.aws_subnet.public[0]                                                                      1            $0
+module.vpc.aws_subnet.public[1]                                                                      1            $0
+module.vpc.aws_subnet.public[2]                                                                      1            $0
+module.vpc.aws_vpc.this[0]                                                                           1            $0
+aws_cloudwatch_log_group.route53_query_logs                                                          1            $0
+aws_iam_openid_connect_provider.this                                                                 1            $0
+aws_cloudwatch_log_resource_policy.route53_query_logs                                                1            $0
+aws_s3_bucket.lb_logs                                                                                1            $0
+aws_s3_bucket.oidc                                                                                   1            $0
+aws_s3_bucket_lifecycle_configuration.incomplete_uploads                                             1            $0
+aws_s3_bucket_lifecycle_configuration.lb_logs                                                        1            $0
+aws_s3_bucket_policy.lb_logs                                                                         1            $0
+aws_s3_bucket_policy.oidc                                                                            1            $0
+

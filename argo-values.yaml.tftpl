@@ -1,0 +1,34 @@
+server:
+  certificate:
+    enabled: true
+    domain: "argocd.${domain_name}"
+    issuer:
+      group: cert-manager.io
+      kind: ClusterIssuer
+      name: letsencrypt-prod
+    secretName: argocd-server-tls # pragma: allowlist secret
+
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      service.beta.kubernetes.io/aws-load-balancer-subnets: "${public_subnets}"
+      external-dns.alpha.kubernetes.io/hostname: "argocd.${domain_name}"
+    servicePortHttps: 443
+
+  ingress:
+    enabled: false
+
+configs:
+  params:
+    server.insecure: "false"
+  cm:
+    oidc.config: |
+      name: Keycloak
+      issuer: ${argocd_oidc_issuer}
+      clientID: ${argocd_oidc_client_id}
+      clientSecret: $oidc.keycloak.clientSecret
+      refreshTokenThreshold: 2m
+      requestedScopes: ["openid", "profile", "email", "groups"]

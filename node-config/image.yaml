@@ -1,0 +1,6 @@
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/gvisor
+      - siderolabs/nonfree-kmod-nvidia-lts
+      - siderolabs/nvidia-container-toolkit-lts
