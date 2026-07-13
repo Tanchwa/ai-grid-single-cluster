@@ -1,7 +1,7 @@
 resource "aws_lb" "k8s_api" {
   # checkov:skip=CKV_AWS_150:enabling deletion protection makes no sense with terraform
   name                             = "${var.cluster_name}-api-lb"
-  internal                         = false
+  internal                         = true
   load_balancer_type               = "network"
   subnets                          = module.vpc.private_subnets
   enable_cross_zone_load_balancing = true
@@ -29,7 +29,6 @@ resource "aws_lb_target_group" "k8s_api" {
   health_check {
     enabled             = true
     interval            = 30
-    path                = "/healthz"
     port                = "6443"
     protocol            = "TCP"
     timeout             = 5

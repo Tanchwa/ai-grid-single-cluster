@@ -19,6 +19,12 @@ data "talos_machine_configuration" "controlplane" {
         allowSchedulingOnControlPlanes = false
         apiServer = {
           certSANs = [aws_lb.k8s_api.dns_name]
+          extraArgs = {
+            "service-account-issuer" = local.oidc_issuer_url
+          }
+        }
+        serviceAccount = {
+          key = base64encode(tls_private_key.sa_signing.private_key_pem)
         }
       }
     }),

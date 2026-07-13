@@ -61,6 +61,14 @@ mock_provider "aws" {
     }
   }
 
+  # launch_template id is validated by aws_autoscaling_group and aws_instance
+  # as lt-[0-9a-f]{17}; the default mock id does not match that pattern.
+  mock_resource "aws_launch_template" {
+    defaults = {
+      id = "lt-0123456789abcdef0"
+    }
+  }
+
   # account_id is interpolated into S3 bucket names and KMS key policies.
   mock_data "aws_caller_identity" {
     defaults = {
@@ -92,9 +100,9 @@ mock_provider "aws" {
 }
 
 mock_provider "talos" {
-  # providers.tf reads kubeconfig_raw and yamldecode()s it to configure the Helm
-  # provider. The mock must return structurally valid kubeconfig YAML.
-  mock_data "talos_cluster_kubeconfig" {
+  # providers.tf yamldecode()s kubeconfig_raw from the resource to configure the
+  # Helm provider. The mock must return structurally valid kubeconfig YAML.
+  mock_resource "talos_cluster_kubeconfig" {
     defaults = {
       kubeconfig_raw = "clusters:\n- cluster:\n    server: https://10.0.1.10:6443\n    certificate-authority-data: dGVzdA==\n  name: test-single\nusers:\n- user:\n    client-certificate-data: dGVzdA==\n    client-key-data: dGVzdA==\n  name: admin\n"
     }
@@ -122,13 +130,11 @@ override_data {
   }
 }
 
-# providers.tf reads this file via file() during init — it must exist on disk.
 variables {
   cluster_name           = "test-single"
   domain_name            = "asutliff-aws.com"
   global_network_space   = "10.0.0.0/16"
   github_repository_name = "argocd-core"
-  talosconfig_path       = "tests/fixtures/talosconfig.yaml"
 
   # The talos provider's ValidateDataSourceConfig runs even with mock_provider
   # and rejects empty strings. Valid semver strings are required to pass the

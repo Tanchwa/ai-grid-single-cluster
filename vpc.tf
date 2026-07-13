@@ -4,7 +4,7 @@ module "vpc" {
   name = "${var.cluster_name}-vpc"
   cidr = var.global_network_space
 
-  azs             = ["ap-east-2a", "ap-east-2b", "ap-east-2c"]
+  azs             = ["${var.aws_region}a", "${var.aws_region}b", "${var.aws_region}c"]
   private_subnets = local.subnet_cidrs
   public_subnets  = local.public_subnet_cidrs
 

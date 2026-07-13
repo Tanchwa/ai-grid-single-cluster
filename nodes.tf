@@ -9,6 +9,7 @@ module "cluster_controlplane_nodes" {
   subnet_ids = module.vpc.private_subnets
 
   ami_id               = var.talos_ami
+  instance_type        = "t3.small"
   talos_machine_config = base64encode(data.talos_machine_configuration.controlplane.machine_configuration)
 
   talos_api_allowed_cidrs = [module.vpc.vpc_cidr_block]
@@ -16,8 +17,8 @@ module "cluster_controlplane_nodes" {
 
   create_lb_controller_irsa = true
   create_external_dns_irsa  = true
-  oidc_provider_arn         = var.oidc_provider_arn
-  oidc_provider_url         = var.oidc_provider_url
+  oidc_provider_arn         = aws_iam_openid_connect_provider.this.arn
+  oidc_provider_url         = local.oidc_provider_url
 }
 
 module "cluster_worker_nodes" {
@@ -33,6 +34,7 @@ module "cluster_worker_nodes" {
   subnet_ids = module.vpc.private_subnets
 
   ami_id               = var.talos_ami
+  instance_type        = "g5.xlarge"
   talos_machine_config = base64encode(data.talos_machine_configuration.worker.machine_configuration)
 
   talos_api_allowed_cidrs = [module.vpc.vpc_cidr_block]

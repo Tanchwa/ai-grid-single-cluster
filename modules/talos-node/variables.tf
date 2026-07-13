@@ -71,7 +71,7 @@ variable "ami_id" {
 variable "instance_type" {
   description = "EC2 instance type."
   type        = string
-  default     = "m6i.xlarge"
+  default     = "t2.micro"
 }
 
 variable "instance_count" {
@@ -105,7 +105,7 @@ variable "root_volume_size_gb" {
 }
 
 variable "root_volume_type" {
-  description = "EBS volume type."
+  description = "Root EBS volume type."
   type        = string
   default     = "gp3"
 }
@@ -113,7 +113,7 @@ variable "root_volume_type" {
 variable "longhorn_volume_size_gb" {
   description = "Longhorn EBS volume size in GiB. Talos minimum is 10 GiB; GPU/Longhorn workers need more."
   type        = number
-  default     = 100
+  default     = 1000
 }
 
 variable "longhorn_volume_type" {

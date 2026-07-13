@@ -28,4 +28,5 @@ resource "helm_release" "lb_controller" {
     value = module.cluster_controlplane_nodes.lb_controller_role_arn
   }
 
+  depends_on = [talos_cluster_kubeconfig.this]
 }

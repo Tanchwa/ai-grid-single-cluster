@@ -41,25 +41,12 @@ resource "aws_launch_template" "this" {
     name = local.instance_profile_name
   }
 
-  network_interfaces {
-    associate_public_ip_address = false
-    security_groups = concat(
-      [aws_security_group.nodes.id],
-    )
-    delete_on_termination = true
-  }
+  vpc_security_group_ids = [aws_security_group.nodes.id]
 
+  # this is only for longhorn
+  # the OS disk image is included in the AMI
   block_device_mappings {
-    device_name = "dev/xvda"
-    ebs {
-      volume_size           = var.root_volume_size_gb
-      volume_type           = var.root_volume_type
-      delete_on_termination = true
-      encrypted             = true
-    }
-  }
-  block_device_mappings {
-    device_name = "dev/xvdb"
+    device_name = "/dev/sdb"
     ebs {
       volume_size           = var.longhorn_volume_size_gb
       volume_type           = var.longhorn_volume_type

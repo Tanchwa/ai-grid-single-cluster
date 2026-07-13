@@ -182,7 +182,7 @@ resource "aws_vpc_security_group_ingress_rule" "nodeport_tcp" {
   from_port         = 30000
   to_port           = 32767
   ip_protocol       = "tcp"
-  description       = "NodePort services (TCP) – ALB/NLB target group access"
+  description       = "NodePort services (TCP) - ALB/NLB target group access"
   tags              = local.common_tags
 }
 

@@ -116,11 +116,6 @@ resource "aws_iam_instance_profile" "nodes" {
 # Enable on exactly one module instance per cluster (typically the control plane group).
 # The policy document (lb_controller_iam_policy.json) is the official AWS-published policy.
 
-data "aws_iam_openid_connect_provider" "this" {
-  count = var.create_lb_controller_irsa ? 1 : 0
-  arn   = var.oidc_provider_arn
-}
-
 resource "aws_iam_role" "lb_controller" {
   count = var.create_lb_controller_irsa ? 1 : 0
 

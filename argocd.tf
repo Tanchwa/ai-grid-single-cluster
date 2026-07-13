@@ -10,8 +10,7 @@ resource "helm_release" "argocd" {
   wait             = true
 
   values = [
-    file("${path.module}/argo-values.yaml"),
-    templatefile("${path.module}/argo-values-dex.yaml.tftpl", {
+    templatefile("${path.module}/argo-values.yaml.tftpl", {
       domain_name           = var.domain_name
       argocd_oidc_issuer    = var.argocd_oidc_issuer
       argocd_oidc_client_id = var.argocd_oidc_client_id
@@ -19,13 +18,13 @@ resource "helm_release" "argocd" {
     }),
   ]
 
-  # OIDC client secret stored in argocd-secret via ArgoCD's $dex.oidcClientSecret substitution.
+  # OIDC client secret stored in argocd-secret via ArgoCD's $oidc.keycloak.clientSecret substitution.
   set_sensitive {
-    name  = "configs.secret.extra.dex\\.oidcClientSecret"
+    name  = "configs.secret.extra.oidc\\.keycloak\\.clientSecret"
     value = var.argocd_oidc_client_secret
   }
 
-  depends_on = [helm_release.lb_controller]
+  depends_on = [talos_cluster_kubeconfig.this, helm_release.lb_controller]
 }
 
 # ─── ArgoCD App-of-Apps bootstrap ────────────────────────────────────────────
@@ -47,5 +46,5 @@ resource "helm_release" "argocd_bootstrap" {
     }))
   ]
 
-  depends_on = [helm_release.argocd]
+  depends_on = [talos_cluster_kubeconfig.this, helm_release.argocd]
 }

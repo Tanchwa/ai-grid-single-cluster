@@ -1,6 +1,7 @@
 # If you disable DNSSEC signing for your hosted zone before the DNS changes have propagated, your domain could become unavailable on the internet. When you remove the DS records, you must wait until the longest TTL for the DS records that you remove has expired before you complete the step to disable DNSSEC signing. Please refer to the Route 53 Developer Guide - Disable DNSSEC for a detailed breakdown on the steps required to disable DNSSEC safely for a hosted zone.
 # https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring-dnssec-disable.html
 resource "aws_kms_key" "this" {
+  provider                 = aws.us_east_1
   description              = "KMS key for signing DNSSEC records in Route53"
   customer_master_key_spec = "ECC_NIST_P256"
   deletion_window_in_days  = 7
@@ -12,8 +13,10 @@ resource "aws_kms_key" "this" {
         Action = [
           "kms:DescribeKey",
           "kms:GetPublicKey",
+          "kms:PutKeyPolicy",
           "kms:Sign",
           "kms:Verify",
+          "kms:CreateGrant",
         ],
         Effect = "Allow"
         Principal = {
@@ -26,7 +29,7 @@ resource "aws_kms_key" "this" {
         Action = "kms:*"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          AWS = data.aws_caller_identity.current.arn
         }
         Resource = "*"
         Sid      = "Enable IAM User Permissions"

@@ -7,17 +7,17 @@ data "aws_iam_policy_document" "cert_manager_assume_role" {
     effect = "Allow"
     principals {
       type        = "Federated"
-      identifiers = [var.oidc_provider_arn]
+      identifiers = [aws_iam_openid_connect_provider.this.arn]
     }
     actions = ["sts:AssumeRoleWithWebIdentity"]
     condition {
       test     = "StringEquals"
-      variable = "${var.oidc_provider_url}:sub"
+      variable = "${local.oidc_provider_url}:sub"
       values   = ["system:serviceaccount:cert-manager:cert-manager"]
     }
     condition {
       test     = "StringEquals"
-      variable = "${var.oidc_provider_url}:aud"
+      variable = "${local.oidc_provider_url}:aud"
       values   = ["sts.amazonaws.com"]
     }
   }
