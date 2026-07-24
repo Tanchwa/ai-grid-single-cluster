@@ -11,7 +11,7 @@ resource "helm_release" "argocd" {
 
   values = [
     templatefile("${path.module}/argo-values.yaml.tftpl", {
-      domain_name           = var.domain_name
+      cluster_name          = var.cluster_name
       argocd_oidc_issuer    = var.argocd_oidc_issuer
       argocd_oidc_client_id = var.argocd_oidc_client_id
       public_subnets        = join(",", module.vpc.public_subnets)
@@ -27,6 +27,19 @@ resource "helm_release" "argocd" {
   depends_on = [talos_cluster_kubeconfig.this, helm_release.lb_controller]
 }
 
+#resource "time_sleep" "wait_argo_lb" {
+#  create_duration = "1m"
+#  depends_on      = [helm_release.argocd]
+#}
+#
+#data "aws_lb" "argocd" {
+#  tags = {
+#    argocd-cluster = var.cluster_name
+#  }
+#
+#  depends_on = [time_sleep.wait_argo_lb]
+#}
+
 # ─── ArgoCD App-of-Apps bootstrap ────────────────────────────────────────────
 
 resource "helm_release" "argocd_bootstrap" {
@@ -39,10 +52,7 @@ resource "helm_release" "argocd_bootstrap" {
       githubRepositoryName            = var.github_repository_name
       githubApplicationId             = var.github_application_id
       githubApplicationInstallationId = var.github_application_installation_id
-      githubApplicationPrivateKey     = var.github_application_private_key
-      letsencryptEmail                = var.letsencrypt_email
-      route53ZoneId                   = aws_route53_zone.this.zone_id
-      argocdDomain                    = "argocd.${var.domain_name}"
+      githubApplicationPrivateKey     = local._github_application_private_key
     }))
   ]
 

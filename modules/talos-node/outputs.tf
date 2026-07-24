@@ -15,7 +15,7 @@ output "instance_ids" {
 
 output "instance_private_ips" {
   description = "Private IP addresses of control plane instances. Use the first IP as the Talos bootstrap endpoint."
-  value       = aws_instance.control_plane[*].private_ip
+  value       = var.node_role == "controlplane" ? aws_instance.control_plane[*].private_ip : try(data.aws_instances.workers[0].private_ips, [])
 }
 
 output "asg_name" {

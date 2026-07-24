@@ -1,8 +1,7 @@
 # Local .terraform directories
 **/.terraform/*
 
-# Ignore Terraform lock file
-.terraform.lock.hcl
+# Ignore Terraform lock file .terraform.lock.hcl
 
 # Ignore variables files
 *.auto.tfvars
@@ -20,3 +19,5 @@ terraform.rc
 # Ignore Terraform state files
 *.tfstate
 *.tfstate.*
+
+talosconfig.yaml

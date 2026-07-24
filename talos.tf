@@ -28,7 +28,8 @@ data "talos_machine_configuration" "controlplane" {
         }
       }
     }),
-    file("${path.module}/node-config/controlplane.yaml")
+    file("${path.module}/node-config/controlplane.yaml"),
+    file("${path.module}/node-config/cluster.yaml")
   ]
 }
 
@@ -48,7 +49,8 @@ data "talos_machine_configuration" "worker" {
         }
       }
     }),
-    file("${path.module}/node-config/worker.yaml")
+    file("${path.module}/node-config/worker.yaml"),
+    file("${path.module}/node-config/longhorn-volume.yaml")
   ]
 }
 
@@ -76,10 +78,25 @@ resource "talos_machine_bootstrap" "this" {
   depends_on = [talos_machine_configuration_apply.controlplane]
 }
 
+# talos_cluster_health was removed: worker nodes are managed by an ASG so their
+# IPs aren't reliably known at apply time. Including booting nodes caused apid
+# timeouts and boot-sequence failures. A fixed sleep is simpler and sufficient.
+resource "time_sleep" "wait_for_cluster" {
+  create_duration = "3m"
+  depends_on      = [talos_machine_bootstrap.this]
+}
+
 resource "talos_cluster_kubeconfig" "this" {
   client_configuration = talos_machine_secrets.this.client_configuration
   node                 = local.cluster_bootstrap_ip
   endpoint             = local.cluster_bootstrap_ip
 
-  depends_on = [talos_machine_bootstrap.this]
+  depends_on = [time_sleep.wait_for_cluster]
+}
+
+data "talos_client_configuration" "this" {
+  cluster_name         = var.cluster_name
+  client_configuration = talos_machine_secrets.this.client_configuration
+  endpoints            = module.cluster_controlplane_nodes.instance_private_ips
+  nodes                = module.cluster_controlplane_nodes.instance_private_ips
 }

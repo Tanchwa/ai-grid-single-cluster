@@ -7,7 +7,8 @@ resource "aws_s3_bucket" "lb_logs" {
   # checkov:skip=CKV_AWS_18:No access logging is fine for now. no critical data stored
   # checkov:skip=CKV_AWS_21:we don't really need versioning control for logs
   # checkov:skip=CKV_AWS_145:KMS key encryption is more for long term security
-  bucket = "aigrid-lb-logs-${var.cluster_name}-${data.aws_caller_identity.current.account_id}"
+  bucket        = "aigrid-lb-logs-${var.cluster_name}-${data.aws_caller_identity.current.account_id}"
+  force_destroy = true
 
   tags = {
     Name = "aigrid-lb-logs-${var.cluster_name}"

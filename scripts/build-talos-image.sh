@@ -7,11 +7,12 @@
 #   ./scripts/build-talos-image.sh [OPTIONS]
 #
 # Options:
-#   -v, --version VERSION    Talos version to build (default: v1.13.5)
-#       --target TARGET      What to build: aws | pxe | all  (default: aws)
-#       --import-aws         Import AWS image to AWS as an AMI (requires --target aws|all)
-#       --s3-bucket BUCKET   S3 bucket for staging the image (required with --import-aws)
-#       --region REGION      AWS region (default: ap-east-2)
+#   -v, --version VERSION      Talos version to build (default: v1.13.5)
+#       --image-file FILE      Schematic YAML to build from (default: node-config/image.yaml)
+#       --target TARGET        What to build: aws | pxe | all  (default: aws)
+#       --import-aws           Import AWS image to AWS as an AMI (requires --target aws|all)
+#       --s3-bucket BUCKET     S3 bucket for staging the image (required with --import-aws)
+#       --region REGION        AWS region (default: ap-east-2)
 
 set -euo pipefail
 
@@ -26,18 +27,23 @@ IMPORT_AWS=false
 S3_BUCKET=""
 AWS_REGION="ap-east-2"
 AWS_PROFILE="${AWS_PROFILE:-default}"
+IMAGE_FILE=""
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -v|--version)  TALOS_VERSION="$2"; shift 2 ;;
-    --target)      TARGET="$2"; shift 2 ;;
-    --import-aws)  IMPORT_AWS=true; shift ;;
-    --s3-bucket)   S3_BUCKET="$2"; shift 2 ;;
-    --region)      AWS_REGION="$2"; shift 2 ;;
-    --profile)     AWS_PROFILE="$2"; shift 2 ;;
+    -v|--version)   TALOS_VERSION="$2"; shift 2 ;;
+    --image-file)   IMAGE_FILE="$2"; shift 2 ;;
+    --target)       TARGET="$2"; shift 2 ;;
+    --import-aws)   IMPORT_AWS=true; shift ;;
+    --s3-bucket)    S3_BUCKET="$2"; shift 2 ;;
+    --region)       AWS_REGION="$2"; shift 2 ;;
+    --profile)      AWS_PROFILE="$2"; shift 2 ;;
     *) echo "Unknown argument: $1" >&2; exit 1 ;;
   esac
 done
+
+IMAGE_FILE="${IMAGE_FILE:-$NODE_CONFIG_DIR/image.yaml}"
+MANIFEST_LABEL="$(basename "$IMAGE_FILE" .yaml)"
 
 if [[ "$TARGET" != "aws" && "$TARGET" != "pxe" && "$TARGET" != "all" ]]; then
   echo "ERROR: --target must be one of: aws, pxe, all" >&2
@@ -49,18 +55,17 @@ if [[ "$IMPORT_AWS" == "true" && "$TARGET" == "pxe" ]]; then
   exit 1
 fi
 
-SCHEMATIC_FILE="$NODE_CONFIG_DIR/image.yaml"
+SCHEMATIC_FILE="$IMAGE_FILE"
 
-EXTENSIONS=(
-  "siderolabs/gvisor"
-  "siderolabs/nonfree-kmod-nvidia-lts"
-  "siderolabs/nvidia-container-toolkit-lts"
-)
+EXTENSIONS=()
+while IFS= read -r ext; do
+  EXTENSIONS+=("$ext")
+done <<< "$(grep -E '^\s+- siderolabs/' "$SCHEMATIC_FILE" | awk '{print $2}')"
 
 log()  { echo "==> $*"; }
 step() { echo "--- $*"; }
 
-log "Talos image build — version ${TALOS_VERSION}, target: ${TARGET}, arch: ${ARCH}"
+log "Talos image build — version ${TALOS_VERSION}, manifest: ${MANIFEST_LABEL}, target: ${TARGET}, arch: ${ARCH}"
 echo ""
 
 # ---------------------------------------------------------------------------
@@ -101,7 +106,8 @@ echo ""
 # ---------------------------------------------------------------------------
 
 build_aws() {
-  local out="$NODE_CONFIG_DIR/_out/aws-${ARCH}.raw.zst"
+  local imager_out="$NODE_CONFIG_DIR/_out/aws-${ARCH}.raw.zst"
+  local out="$NODE_CONFIG_DIR/_out/${MANIFEST_LABEL}-aws-${ARCH}.raw.zst"
   step "Building AWS disk image"
   docker run --rm -t \
     -v "${NODE_CONFIG_DIR}/_out:/out" \
@@ -110,10 +116,11 @@ build_aws() {
     --arch "${ARCH}" \
     "${EXTENSION_FLAGS[@]}"
 
-  if [[ ! -f "$out" ]]; then
-    echo "ERROR: Expected image not found: ${out}" >&2
+  if [[ ! -f "$imager_out" ]]; then
+    echo "ERROR: Expected image not found: ${imager_out}" >&2
     exit 1
   fi
+  mv "$imager_out" "$out"
   log "AWS image built: ${out} ($(ls -lh "$out" | awk '{print $5}'))"
   echo ""
 }
@@ -156,20 +163,26 @@ build_pxe() {
 }
 
 import_aws_ami() {
-  local image="$NODE_CONFIG_DIR/_out/aws-${ARCH}.raw.zst"
+  local image="$NODE_CONFIG_DIR/_out/${MANIFEST_LABEL}-aws-${ARCH}.raw.zst"
 
   if [[ -z "$S3_BUCKET" ]]; then
     echo "ERROR: --s3-bucket is required when using --import-aws" >&2
     exit 1
   fi
 
-  local s3_key="talos-images/talos-${TALOS_VERSION}-${SCHEMATIC_ID:0:12}-aws-${ARCH}.raw.zst"
+  local raw_image="${image%.zst}"
+  local s3_key="talos-images/talos-${TALOS_VERSION}-${SCHEMATIC_ID:0:12}-${MANIFEST_LABEL}-aws-${ARCH}.raw"
+
+  step "Decompressing image (zstd → raw)"
+  zstd -d "$image" -o "$raw_image" --force
+  echo "    Output: ${raw_image} ($(ls -lh "$raw_image" | awk '{print $5}'))"
+  echo ""
 
   step "Uploading image to s3://${S3_BUCKET}/${s3_key}"
-  aws s3 cp "$image" "s3://${S3_BUCKET}/${s3_key}" \
+  aws s3 cp "$raw_image" "s3://${S3_BUCKET}/${s3_key}" \
     --region "$AWS_REGION" \
-    --profile "$AWS_PROFILE" \
-    --no-progress
+    --profile "$AWS_PROFILE"
+  rm -f "$raw_image"
   echo ""
 
   step "Importing EBS snapshot"
@@ -212,15 +225,16 @@ import_aws_ami() {
   echo ""
 
   step "Registering AMI"
-  local ami_name="talos-${TALOS_VERSION}-${SCHEMATIC_ID:0:12}-${ARCH}"
+  local ami_name="talos-${TALOS_VERSION}-${SCHEMATIC_ID:0:12}-${MANIFEST_LABEL}-${ARCH}"
   local ami_result ami_id
   ami_result=$(aws ec2 register-image \
     --profile "$AWS_PROFILE" \
     --region "$AWS_REGION" \
     --name "$ami_name" \
-    --description "Talos ${TALOS_VERSION} schematic=${SCHEMATIC_ID:0:12} ${ARCH}" \
+    --description "Talos ${TALOS_VERSION} schematic=${SCHEMATIC_ID:0:12} ${MANIFEST_LABEL} ${ARCH}" \
     --architecture x86_64 \
     --virtualization-type hvm \
+    --boot-mode uefi \
     --root-device-name /dev/xvda \
     --block-device-mappings "[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"SnapshotId\":\"${snapshot_id}\",\"VolumeType\":\"gp3\",\"DeleteOnTermination\":true}}]" \
     --ena-support \
@@ -229,7 +243,7 @@ import_aws_ami() {
 
   log "AMI registered: ${ami_id} (${ami_name})"
   echo ""
-  echo "    Update test.tfvars.json with:"
+  echo "    Update test.tfvars.json — add/update the entry for this manifest (${MANIFEST_LABEL}):"
   echo "      \"talos_ami\": \"${ami_id}\""
   echo ""
 }

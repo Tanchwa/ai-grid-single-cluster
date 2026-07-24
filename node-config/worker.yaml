@@ -1,19 +1,25 @@
 machine:
-    type: worker
-    kernel:
-        modules:
-            # NVIDIA kernel modules — requires a Talos image built with the
-            # nvidia-gpu-support system extension via image factory
-            - name: nvidia
-            - name: nvidia_uvm
-            - name: nvidia_drm
-            - name: nvidia_modeset
-            - name: nvidia_peermem
-   # TODO look up how to add volumes properly, this way is failing terraform
-   # volumes:
-   #     - name: LONGHORN
-   #       provisioning:
-   #           diskSelector:
-   #               size: ">= 100GiB" # adjust to match your Longhorn data disk
-   #           maxSize: "2TiB"
-   #       mountpoint: /var/lib/longhorn
+  kubelet:
+    extraMounts:
+      - destination: /var/mnt/longhorn
+        type: bind
+        source: /var/mnt/longhorn
+        options:
+          - bind
+          - rshared
+          - rw
+  type: worker
+  kernel:
+      modules:
+          # NVIDIA kernel modules — requires a Talos image built with the
+          # nvidia-gpu-support system extension via image factory
+          - name: nvidia
+          - name: nvidia_uvm
+          - name: nvidia_drm
+          - name: nvidia_modeset
+          # need malanox modules for nvidia_peermem to enable RDMA over infiniband
+          # - name: ib_core
+          # - name: mlx5_core
+          # - name: mlx5_ib
+          # - name: nvidia_peermem
+# see if we need to add extra mounts for kubelet for longhorn to work properly

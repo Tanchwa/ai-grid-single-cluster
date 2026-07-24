@@ -26,8 +26,13 @@ variable "domain_name" {
   type        = string
 }
 
-variable "talos_ami" {
-  description = "Talos AMI to use in EC2 instances."
+variable "talos_worker_ami" {
+  description = "Talos AMI to use in EC2 worker instances."
+  type        = string
+}
+
+variable "talos_controlplane_ami" {
+  description = "Talos AMI to use in EC2 controlplane instances."
   type        = string
 }
 
@@ -38,7 +43,7 @@ variable "talos_version" {
 }
 
 variable "kubernetes_version" {
-  description = "Kubernetes install version."
+  description = "Kubernetes install version. Must be a full patch version (e.g. v1.36.3) matching an available kubelet image tag."
   type        = string
   default     = ""
 }
@@ -72,7 +77,6 @@ variable "argocd_oidc_client_secret" {
 variable "letsencrypt_email" {
   description = "Email address for Let's Encrypt ACME account registration and certificate expiry notifications."
   type        = string
-  default     = ""
 }
 
 # ─── GitHub App (ArgoCD repository authentication) ───────────────────────────
@@ -92,14 +96,38 @@ variable "github_application_installation_id" {
   type        = string
 }
 
-variable "github_application_private_key" {
-  description = "GitHub App private key in PEM format for ArgoCD repository authentication."
-  type        = string
-  sensitive   = true
+locals {
+  _github_application_private_key = file("~/Downloads/for-argocd-poc.2026-07-20.private-key.pem")
 }
+
+#variable "github_application_private_key" {
+#  description = "GitHub App private key in PEM format for ArgoCD repository authentication."
+#  type        = string
+#  sensitive   = true
+#}
 
 variable "tailscale_auth_key" {
   description = "Tailscale auth key (reusable, ephemeral, or pre-authorized) used to join the gateway EC2 instance to your tailnet."
   type        = string
   sensitive   = true
+}
+
+# ─── Cilium ──────────────────────────────────────────────────────────────────
+
+variable "cilium_version" {
+  description = "Cilium Helm chart version to install."
+  type        = string
+  default     = "1.17.3"
+}
+
+variable "cilium_pod_cidr" {
+  description = "Pod CIDR for Cilium's cluster-pool IPAM. Must not overlap with the VPC CIDR (global_network_space)."
+  type        = string
+  default     = "10.244.0.0/16"
+}
+
+variable "cilium_bgp_enabled" {
+  description = "Enable Cilium BGP Control Plane and route advertisement. Actual peering requires CiliumBGPPeeringPolicy or CiliumBGPClusterConfig resources; safe to enable alongside AWS Load Balancer Controller."
+  type        = bool
+  default     = true
 }

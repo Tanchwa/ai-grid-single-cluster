@@ -45,16 +45,18 @@ resource "aws_launch_template" "this" {
 
   # this is only for longhorn
   # the OS disk image is included in the AMI
-  block_device_mappings {
-    device_name = "/dev/sdb"
-    ebs {
-      volume_size           = var.longhorn_volume_size_gb
-      volume_type           = var.longhorn_volume_type
-      delete_on_termination = true
-      encrypted             = true
+  dynamic "block_device_mappings" {
+    for_each = var.longhorn_volume_size_gb > 0 ? [1] : []
+    content {
+      device_name = "/dev/sdb"
+      ebs {
+        volume_size           = var.longhorn_volume_size_gb
+        volume_type           = var.longhorn_volume_type
+        delete_on_termination = true
+        encrypted             = false # setting this to false for now, it's going to require me to set up a KMS proxy to the aws key in order to be able have Talos auto decrypt it
+      }
     }
   }
-
 
   # IMDSv2 required; hop limit 2 so pods can reach IMDS via the node.
   metadata_options {
@@ -97,6 +99,7 @@ resource "aws_launch_template" "this" {
 }
 
 # ─── Control plane: static instances (stable etcd membership) ────────────────
+
 
 resource "aws_instance" "control_plane" {
   count = local.is_control_plane ? var.instance_count : 0
@@ -153,8 +156,8 @@ resource "aws_autoscaling_group" "workers" {
     version = "$Latest"
   }
 
-  health_check_type         = "EC2"
-  health_check_grace_period = 300
+  # health_check_type         = "EC2"
+  # health_check_grace_period = 300
 
   # Required so the Cluster Autoscaler and AWS LB Controller can discover nodes.
   dynamic "tag" {
@@ -170,8 +173,20 @@ resource "aws_autoscaling_group" "workers" {
     }
   }
 
-  lifecycle {
-    create_before_destroy = true
-    ignore_changes        = [desired_capacity]
+  # lifecycle {
+  #   create_before_destroy = true
+  #   ignore_changes        = [desired_capacity]
+  # }
+}
+
+data "aws_instances" "workers" {
+  count = local.is_control_plane ? 0 : 1
+
+  filter {
+    name   = "tag:aws:autoscaling:groupName"
+    values = [length(aws_autoscaling_group.workers) > 0 ? aws_autoscaling_group.workers[0].name : null]
+
   }
+
+  instance_state_names = ["running"]
 }

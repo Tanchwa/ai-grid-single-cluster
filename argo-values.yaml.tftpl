@@ -1,12 +1,8 @@
 server:
+  # Certificate is managed by the argo-bootstrap chart after install, which creates the letsencrypt-prod
+  # ClusterIssuer and a Certificate CR targeting the argocd-server-tls secret. ArgoCD picks it up automatically.
   certificate:
-    enabled: true
-    domain: "argocd.${domain_name}"
-    issuer:
-      group: cert-manager.io
-      kind: ClusterIssuer
-      name: letsencrypt-prod
-    secretName: argocd-server-tls # pragma: allowlist secret
+    enabled: false
 
   service:
     type: LoadBalancer
@@ -15,7 +11,7 @@ server:
       service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "instance"
       service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
       service.beta.kubernetes.io/aws-load-balancer-subnets: "${public_subnets}"
-      external-dns.alpha.kubernetes.io/hostname: "argocd.${domain_name}"
+      service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "argocd-cluster=${cluster_name}"
     servicePortHttps: 443
 
   ingress:
@@ -32,3 +28,16 @@ configs:
       clientSecret: $oidc.keycloak.clientSecret
       refreshTokenThreshold: 2m
       requestedScopes: ["openid", "profile", "email", "groups"]
+      requestedIDTokenClaims:
+        groups:
+          essential: true
+    resource.exclusions: |
+      - apiGroups:
+        - cilium.io
+        kinds:
+        - CiliumEndpoint
+        - CiliumEndpointSlice
+        - CiliumIdentity
+        - CiliumNode
+        clusters:
+        - "*"

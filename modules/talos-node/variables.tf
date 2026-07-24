@@ -113,7 +113,7 @@ variable "root_volume_type" {
 variable "longhorn_volume_size_gb" {
   description = "Longhorn EBS volume size in GiB. Talos minimum is 10 GiB; GPU/Longhorn workers need more."
   type        = number
-  default     = 1000
+  default     = 0
 }
 
 variable "longhorn_volume_type" {
@@ -149,9 +149,9 @@ variable "enable_detailed_monitoring" {
 # ─── Cilium options ───────────────────────────────────────────────────────────
 
 variable "cilium_enable_vxlan" {
-  description = "Open UDP 8472 for Cilium VXLAN overlay. Set false when using native routing mode (routingMode: native)."
+  description = "Open UDP 8472 for Cilium VXLAN overlay. Set false only when using native routing mode (routingMode: native)."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "cilium_enable_wireguard" {

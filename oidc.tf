@@ -1,6 +1,6 @@
-# ─── SA token signing key ─────────────────────────────────────────────────────
-# Managed here so the public key can be published as JWKS for IRSA.
-# Injected into the Talos apiserver config in talos.tf.
+# ─── SA signing key ───────────────────────────────────────────────────────────
+# Explicit RSA key so Terraform controls both signing (via cluster.serviceAccount.key)
+# and the JWKS published to S3 — the two ends are guaranteed to match.
 
 resource "tls_private_key" "sa_signing" {
   algorithm = "RSA"
