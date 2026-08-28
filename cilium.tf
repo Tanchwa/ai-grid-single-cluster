@@ -101,5 +101,5 @@ resource "helm_release" "cilium" {
 
   timeout = 480
 
-  depends_on = [talos_cluster_kubeconfig.this, module.tailscale_gateway]
+  depends_on = [talos_cluster_kubeconfig.this, module.tailscale_gateway, aws_lb_target_group_attachment.k8s_api]
 }

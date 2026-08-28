@@ -4,7 +4,7 @@ name: longhorn # Name of the volume. Will mount at /var/mnt/longhorn
 volumeType: disk # Volume type.
 provisioning:
   diskSelector:
-    match: disk.size > 1000000000000u # 1 TB
+    match: disk.size > 10000000000000u # 10TB
 filesystem:
     type: xfs # Filesystem type. Default is `xfs`.
 

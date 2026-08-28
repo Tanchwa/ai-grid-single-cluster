@@ -3,11 +3,6 @@ output "lb_controller_role_arn" {
   value       = module.cluster_controlplane_nodes.lb_controller_role_arn
 }
 
-#output "argocd_url" {
-#  description = "ArgoCD UI — use this hostname directly (no custom domain)."
-#  value       = "https://${data.aws_lb.argocd.dns_name}"
-#}
-
 output "kubeconfig_raw" {
   description = "Raw kubeconfig for the Talos cluster. Requires Tailscale connected to reach the internal API LB."
   sensitive   = true

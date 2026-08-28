@@ -26,6 +26,12 @@ variable "domain_name" {
   type        = string
 }
 
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token used by the cloudflare provider to manage DNS records in the domain_name zone. Needs Zone:Read and DNS:Edit on the zone."
+  type        = string
+  sensitive   = true
+}
+
 variable "talos_worker_ami" {
   description = "Talos AMI to use in EC2 worker instances."
   type        = string
@@ -54,22 +60,22 @@ variable "scheduler_extender_url" {
   default     = ""
 }
 
-# ─── ArgoCD OIDC (Dex connector) ─────────────────────────────────────────────
+# ─── ArgoCD OIDC (Azure Entra ID) ────────────────────────────────────────────
 
 variable "argocd_oidc_issuer" {
-  description = "OIDC issuer URL for ArgoCD Dex (e.g. AWS Cognito: https://cognito-idp.<region>.amazonaws.com/<user-pool-id>)."
+  description = "OIDC issuer URL for ArgoCD login. For Azure Entra ID use the v2.0 endpoint: https://login.microsoftonline.com/<tenant-id>/v2.0"
   type        = string
   default     = ""
 }
 
 variable "argocd_oidc_client_id" {
-  description = "OIDC client ID registered with the issuer for ArgoCD Dex."
+  description = "OIDC client ID for ArgoCD — the Application (client) ID of the Entra app registration."
   type        = string
-  default     = "argocd"
+  default     = ""
 }
 
 variable "argocd_oidc_client_secret" {
-  description = "OIDC client secret for ArgoCD Dex. Injected into argocd-secret; never stored in plain text in state."
+  description = "OIDC client secret for ArgoCD — a client secret on the Entra app registration. Injected into argocd-secret; never stored in plain text in state."
   type        = string
   sensitive   = true
 }
@@ -81,10 +87,18 @@ variable "letsencrypt_email" {
 
 # ─── GitHub App (ArgoCD repository authentication) ───────────────────────────
 
-variable "github_repository_name" {
+variable "github_app_of_apps_repo_name" {
   description = "GitHub repository in org/repo format used as the ArgoCD App-of-Apps source (e.g. my-org/argocd-core)."
   type        = string
+  default     = ""
 }
+
+variable "github_organization_name" {
+  description = "GitHub organization used as the core secret for all app of apps sub sources."
+  type        = string
+  default     = ""
+}
+
 
 variable "github_application_id" {
   description = "GitHub App ID for ArgoCD repository authentication."
@@ -105,6 +119,32 @@ locals {
 #  type        = string
 #  sensitive   = true
 #}
+
+variable "domain_registrant" {
+  description = "Contact information for domain registration (used for registrant, admin, and tech contacts)."
+  type = object({
+    first_name     = string
+    last_name      = string
+    email          = string
+    phone_number   = string # E.164 format: +1.2025551234
+    address_line_1 = string
+    city           = string
+    state          = string # e.g. "WA"; required for US
+    country_code   = string # ISO 3166-1 alpha-2: e.g. "US"
+    zip_code       = string
+  })
+  default = {
+    first_name     = "First"
+    last_name      = "Last"
+    email          = "email@example.com"
+    phone_number   = "+1.2025551234"
+    address_line_1 = "123 Main St"
+    city           = "Seattle"
+    state          = "WA"
+    country_code   = "US"
+    zip_code       = "98101"
+  }
+}
 
 variable "tailscale_auth_key" {
   description = "Tailscale auth key (reusable, ephemeral, or pre-authorized) used to join the gateway EC2 instance to your tailnet."

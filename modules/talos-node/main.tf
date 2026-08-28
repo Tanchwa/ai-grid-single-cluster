@@ -43,6 +43,20 @@ resource "aws_launch_template" "this" {
 
   vpc_security_group_ids = [aws_security_group.nodes.id]
 
+  # Root/OS volume. The OS image ships in the AMI, but its default size is small;
+  # override it here so ASG-launched workers get a resized root disk (the control
+  # plane resizes via aws_instance.root_block_device, which overrides this).
+  # /dev/xvda is the Talos AWS AMI root device.
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = var.root_volume_size_gb
+      volume_type           = var.root_volume_type
+      delete_on_termination = true
+      encrypted             = true
+    }
+  }
+
   # this is only for longhorn
   # the OS disk image is included in the AMI
   dynamic "block_device_mappings" {
@@ -102,6 +116,7 @@ resource "aws_launch_template" "this" {
 
 
 resource "aws_instance" "control_plane" {
+  # checkov:skip=CKV_AWS_8: the root OS volume is encrypted already, but longhorn needs more configuration for encryption on Talos. see line 70 and node-config/longhorn-volume.yaml for further configuration on encrypting the data volume
   count = local.is_control_plane ? var.instance_count : 0
 
   launch_template {
@@ -120,13 +135,6 @@ resource "aws_instance" "control_plane" {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
-  }
-
-  root_block_device {
-    encrypted             = true
-    volume_size           = var.root_volume_size_gb
-    volume_type           = var.root_volume_type
-    delete_on_termination = true
   }
 
   tags = merge(local.instance_tags, {

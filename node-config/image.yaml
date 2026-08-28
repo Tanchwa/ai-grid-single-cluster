@@ -6,3 +6,7 @@ customization:
       - siderolabs/nvidia-container-toolkit-lts
       - siderolabs/iscsi-tools
       - siderolabs/util-linux-tools
+      # Provides the ecr-credential-provider binary at
+      # /usr/local/lib/kubelet/credentialproviders/ used by the kubelet
+      # credentialProviderConfig in node-config/worker.yaml for private ECR pulls.
+      - siderolabs/ecr-credential-provider

@@ -11,6 +11,9 @@ spec:
     repoURL: "https://github.com/{{ .Values.githubRepositoryName }}.git"
     targetRevision: HEAD
     path: Applications/
+    directory:
+      recurse: true
+      include: '*.yaml'
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

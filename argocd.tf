@@ -18,27 +18,15 @@ resource "helm_release" "argocd" {
     }),
   ]
 
-  # OIDC client secret stored in argocd-secret via ArgoCD's $oidc.keycloak.clientSecret substitution.
+  # OIDC client secret stored in argocd-secret via ArgoCD's $oidc.azure.clientSecret substitution.
   set_sensitive {
-    name  = "configs.secret.extra.oidc\\.keycloak\\.clientSecret"
+    name  = "configs.secret.extra.oidc\\.azure\\.clientSecret"
     value = var.argocd_oidc_client_secret
   }
 
   depends_on = [talos_cluster_kubeconfig.this, helm_release.lb_controller]
 }
 
-#resource "time_sleep" "wait_argo_lb" {
-#  create_duration = "1m"
-#  depends_on      = [helm_release.argocd]
-#}
-#
-#data "aws_lb" "argocd" {
-#  tags = {
-#    argocd-cluster = var.cluster_name
-#  }
-#
-#  depends_on = [time_sleep.wait_argo_lb]
-#}
 
 # ─── ArgoCD App-of-Apps bootstrap ────────────────────────────────────────────
 
@@ -49,7 +37,8 @@ resource "helm_release" "argocd_bootstrap" {
 
   values = [
     sensitive(jsonencode({
-      githubRepositoryName            = var.github_repository_name
+      githubRepositoryName            = var.github_app_of_apps_repo_name
+      githubOrganizationName          = var.github_organization_name
       githubApplicationId             = var.github_application_id
       githubApplicationInstallationId = var.github_application_installation_id
       githubApplicationPrivateKey     = local._github_application_private_key

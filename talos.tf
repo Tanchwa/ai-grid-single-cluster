@@ -18,7 +18,7 @@ data "talos_machine_configuration" "controlplane" {
       cluster = {
         allowSchedulingOnControlPlanes = false
         apiServer = {
-          certSANs = [aws_lb.k8s_api.dns_name]
+          certSANs = [aws_lb.k8s_api.dns_name, aws_lb.k8s_api_public.dns_name]
           extraArgs = {
             "service-account-issuer" = local.oidc_issuer_url
           }

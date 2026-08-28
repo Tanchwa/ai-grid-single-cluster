@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: gpu-debug-test
+spec:
+  restartPolicy: Never
+  runtimeClassName: nvidia
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+  - name: nvidia-smi
+    # amd64 digest of nvidia/cuda:12.6.2-base-ubuntu24.04 (nodes are amd64)
+    image: nvidia/cuda@sha256:0c9ceea26589d43459c725e60c12ea09889d24cc77f4f03729378045e84cfc2a
+    command: ["sh", "-c", "nvidia-smi && sleep 3600"]
+    securityContext:
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      capabilities:
+        drop:
+        - ALL
+      seccompProfile:
+        type: RuntimeDefault
+    resources:
+      limits:
+        nvidia.com/gpu: 1

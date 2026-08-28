@@ -8,6 +8,41 @@ machine:
           - bind
           - rshared
           - rw
+    # Authenticate private ECR image pulls via the node instance-profile role
+    # (see modules/talos-node/iam.tf: node_ecr policy). The binary is provided
+    # by the siderolabs/ecr-credential-provider system extension (see
+    # node-config/image.yaml) at /usr/local/lib/kubelet/credentialproviders/;
+    # Talos auto-wires kubelet's --image-credential-provider-config / --bin-dir
+    # flags when this block is set. The binary reads the request from stdin (no
+    # args/subcommand) and resolves credentials via the AWS SDK chain — on EC2
+    # that's IMDS, and the region is parsed from the image host.
+    credentialProviderConfig:
+      apiVersion: kubelet.config.k8s.io/v1
+      kind: CredentialProviderConfig
+      providers:
+        - name: ecr-credential-provider
+          matchImages:
+            - "*.dkr.ecr.*.amazonaws.com"
+            - "*.dkr.ecr.*.amazonaws.com.cn"
+            - "*.dkr.ecr-fips.*.amazonaws.com"
+          defaultCacheDuration: "12h"
+          apiVersion: credentialprovider.kubelet.k8s.io/v1
+  files:
+    # Register the "nvidia" containerd runtime handler. The binary is provided
+    # by the siderolabs/nvidia-container-toolkit-lts system extension at
+    # /usr/local/bin/nvidia-container-runtime. This backs the "nvidia"
+    # RuntimeClass used by GPU workloads. The NVIDIA GPU Operator must run with
+    # driver.enabled=false and toolkit.enabled=false so it does NOT try to
+    # install its own toolkit to /usr/local/nvidia/toolkit/ (which fails on
+    # Talos' read-only rootfs and produces the misleading error
+    # "/usr/local/nvidia/toolkit/nvidia-cdi-hook: no such file or directory").
+    - op: create
+      path: /etc/cri/conf.d/20-customization.part
+      content: |
+        [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia]
+          runtime_type = "io.containerd.runc.v2"
+          [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.nvidia.options]
+            BinaryName = "/usr/local/bin/nvidia-container-runtime"
   type: worker
   kernel:
       modules:

@@ -1,5 +1,5 @@
 server:
-  # Certificate is managed by the argo-bootstrap chart after install, which creates the letsencrypt-prod
+  # Certificate is managed by the argo-bootstrap chart after install, which creates the cloudflare-dev
   # ClusterIssuer and a Certificate CR targeting the argocd-server-tls secret. ArgoCD picks it up automatically.
   certificate:
     enabled: false
@@ -22,12 +22,16 @@ configs:
     server.insecure: "false"
   cm:
     oidc.config: |
-      name: Keycloak
+      name: Azure Entra ID
+      # issuer must be the v2.0 endpoint: https://login.microsoftonline.com/<tenant-id>/v2.0
       issuer: ${argocd_oidc_issuer}
       clientID: ${argocd_oidc_client_id}
-      clientSecret: $oidc.keycloak.clientSecret
+      clientSecret: $oidc.azure.clientSecret
       refreshTokenThreshold: 2m
-      requestedScopes: ["openid", "profile", "email", "groups"]
+      # Entra has no "groups" scope — group membership is delivered via an app-registration
+      # optional claim, requested below through requestedIDTokenClaims. Configure the "groups"
+      # optional claim (ID token) on the Entra app registration, or the claim will be absent.
+      requestedScopes: ["openid", "profile", "email"]
       requestedIDTokenClaims:
         groups:
           essential: true
