@@ -10,11 +10,25 @@ spec:
     runAsUser: 1000
     seccompProfile:
       type: RuntimeDefault
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchFields:
+              - key: metadata.name
+                operator: In
+                values:
+                  - ip-10-0-2-106
+          - matchExpressions:
+              - key: nvidia.com/gpu.count
+                operator: Gt
+                values:
+                  - "0"
   containers:
   - name: nvidia-smi
     # amd64 digest of nvidia/cuda:12.6.2-base-ubuntu24.04 (nodes are amd64)
     image: nvidia/cuda@sha256:0c9ceea26589d43459c725e60c12ea09889d24cc77f4f03729378045e84cfc2a
-    command: ["sh", "-c", "nvidia-smi && sleep 3600"]
+    command: ["sh", "-c", "sleep infinity"]
     securityContext:
       allowPrivilegeEscalation: false
       runAsNonRoot: true
@@ -23,6 +37,3 @@ spec:
         - ALL
       seccompProfile:
         type: RuntimeDefault
-    resources:
-      limits:
-        nvidia.com/gpu: 1

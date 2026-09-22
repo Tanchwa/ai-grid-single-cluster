@@ -42,8 +42,23 @@ resource "helm_release" "argocd_bootstrap" {
       githubApplicationId             = var.github_application_id
       githubApplicationInstallationId = var.github_application_installation_id
       githubApplicationPrivateKey     = local._github_application_private_key
+
+      # cert-manager ClusterIssuer + the ArgoCD server certificate. The
+      # Cloudflare token itself is never passed through here — the chart only
+      # references the Secret Terraform creates in the cert-manager namespace.
+      letsencryptEmail             = var.letsencrypt_email
+      domainName                   = var.domain_name
+      argocdDomain                 = "argo.${var.domain_name}"
+      cloudflareApiTokenSecretName = local.cloudflare_api_token_secret_name
+      cloudflareApiTokenSecretKey  = local.cloudflare_api_token_secret_key
     }))
   ]
 
-  depends_on = [talos_cluster_kubeconfig.this, helm_release.argocd]
+  # The ClusterIssuer needs the cert-manager CRDs and the Cloudflare token
+  # Secret in place before it will reconcile.
+  depends_on = [
+    talos_cluster_kubeconfig.this,
+    helm_release.argocd,
+    kubernetes_secret_v1.cert_manager_cloudflare_api_token,
+  ]
 }

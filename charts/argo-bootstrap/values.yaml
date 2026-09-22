@@ -5,5 +5,11 @@ githubApplicationInstallationId: ""
 githubApplicationPrivateKey: ""
 
 letsencryptEmail: ""
-route53ZoneId: ""
+# Root zone the ClusterIssuer's DNS-01 solver is scoped to.
+domainName: ""
+# ArgoCD's public hostname — the SAN on the argocd-server-tls certificate.
 argocdDomain: ""
+# Secret holding the Cloudflare API token, created by Terraform in the
+# cert-manager namespace (see cert-manager.tf).
+cloudflareApiTokenSecretName: "cloudflare-api-token" # pragma: allowlist secret
+cloudflareApiTokenSecretKey: "api-token" # pragma: allowlist secret

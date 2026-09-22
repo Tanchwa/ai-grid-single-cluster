@@ -58,8 +58,19 @@ resource "helm_release" "lb_controller" {
   values = [
     yamlencode({
       hostNetwork = true
+      # hostNetwork pods bypass cluster DNS unless this is set; the chart's own
+      # docs call this out for Cilium.
+      dnsPolicy = "ClusterFirstWithHostNet"
+      # With hostNetwork the webhook/metrics host ports are held by the running
+      # pods, so a RollingUpdate can never place a new pod (only 2 schedulable
+      # workers). Recreate frees the ports first.
+      updateStrategy = {
+        type = "Recreate"
+      }
     })
   ]
 
+  # The pod identity webhook only mutates pods created after it is running, so a
+  # webhook (re)install must force the controller pods to be recreated.
   depends_on = [talos_cluster_kubeconfig.this, helm_release.pod_identity_webhook]
 }

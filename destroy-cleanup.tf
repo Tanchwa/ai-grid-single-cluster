@@ -5,7 +5,10 @@
 # the VPC while those load balancers still hold ENIs in the subnets and own
 # security groups in the VPC — subnet/SG deletion then blocks and times out.
 #
-# This runs a destroy-time provisioner that reaps those load balancers first.
+# This runs a destroy-time provisioner that reaps those load balancers first,
+# then deletes the security groups the LB controller created — revoking the
+# rules it injected into the Terraform-managed node SGs that reference them,
+# since AWS refuses to delete a group another group's rule still points at.
 # Ordering is enforced by the dependency graph: because this resource depends on
 # the helm releases AND the VPC, Terraform destroys it BEFORE any of them
 # (destroy order is the reverse of create order). So the cleanup runs while

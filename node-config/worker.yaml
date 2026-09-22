@@ -52,9 +52,10 @@ machine:
           - name: nvidia_uvm
           - name: nvidia_drm
           - name: nvidia_modeset
+          - name: rdma_rxe
           # need malanox modules for nvidia_peermem to enable RDMA over infiniband
+          # or can try rdma_rxe for software based Soft-RoCE
           # - name: ib_core
           # - name: mlx5_core
           # - name: mlx5_ib
           # - name: nvidia_peermem
-# see if we need to add extra mounts for kubelet for longhorn to work properly

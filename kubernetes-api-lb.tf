@@ -21,6 +21,7 @@ resource "aws_lb" "k8s_api" {
 
 resource "aws_lb" "k8s_api_public" {
   # checkov:skip=CKV_AWS_150:enabling deletion protection makes no sense with terraform
+  count                            = var.deploy_public_kubernetes_api ? 1 : 0
   name                             = "${var.cluster_name}-api-lb-public"
   internal                         = false
   load_balancer_type               = "network"
@@ -60,6 +61,7 @@ resource "aws_lb_target_group" "k8s_api" {
 }
 
 resource "aws_lb_target_group" "k8s_api_public" {
+  count       = var.deploy_public_kubernetes_api ? 1 : 0
   name        = "${var.cluster_name}-api-tg-public"
   port        = 6443
   protocol    = "TCP"
@@ -93,13 +95,14 @@ resource "aws_lb_listener" "k8s_api" {
 }
 
 resource "aws_lb_listener" "k8s_api_public" {
-  load_balancer_arn = aws_lb.k8s_api_public.arn
+  count             = var.deploy_public_kubernetes_api ? 1 : 0
+  load_balancer_arn = aws_lb.k8s_api_public[0].arn
   port              = 6443
   protocol          = "TCP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.k8s_api_public.arn
+    target_group_arn = aws_lb_target_group.k8s_api_public[0].arn
   }
 }
 
@@ -114,8 +117,12 @@ resource "aws_lb_target_group_attachment" "k8s_api" {
 }
 
 resource "aws_lb_target_group_attachment" "k8s_api_public" {
-  for_each         = { for idx, id in module.cluster_controlplane_nodes.instance_ids : tostring(idx) => id }
-  target_group_arn = aws_lb_target_group.k8s_api_public.arn
+  # Only attach when the public API load balancer / target group is deployed,
+  # since aws_lb_target_group.k8s_api_public is count-gated on the same var.
+  for_each = var.deploy_public_kubernetes_api ? {
+    for idx, id in module.cluster_controlplane_nodes.instance_ids : tostring(idx) => id
+  } : {}
+  target_group_arn = aws_lb_target_group.k8s_api_public[0].arn
   target_id        = each.value
   port             = 6443
 }

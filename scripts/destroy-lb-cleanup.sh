@@ -15,12 +15,15 @@
 # guarantees it runs while ArgoCD and the LB controller are still alive, so the
 # controllers can delete their AWS load balancers gracefully (including the
 # security groups they own). A direct-AWS backstop then force-deletes anything
-# left — e.g. if the cluster is already unreachable — so the VPC teardown never
-# blocks on an orphaned load balancer.
+# left — e.g. if the cluster is already unreachable — followed by a sweep of the
+# security groups the AWS Load Balancer Controller created (and of the rules in
+# the node security groups that reference them), so the VPC teardown never
+# blocks on an orphaned load balancer or security group.
 set -euo pipefail
 
 : "${VPC_ID:?VPC_ID is required}"
 : "${AWS_REGION:?AWS_REGION is required}"
+: "${CLUSTER_NAME:?CLUSTER_NAME is required}"
 
 log() { echo "[lb-cleanup] $*" >&2; }
 
@@ -89,8 +92,7 @@ graceful_cleanup() {
 # ─── Phase 2: AWS backstop — force-delete and wait until the VPC is clear ──────
 # List every ELBv2 (ALB/NLB) and classic ELB still in the VPC, delete them, and
 # poll until none remain so their ENIs are released before Terraform deletes the
-# subnets. Then sweep the controller-owned security groups that would otherwise
-# block VPC deletion.
+# subnets. Phase 3 then sweeps the security groups they leave behind.
 elbv2_arns() {
   aws_cli elbv2 describe-load-balancers \
     --query "LoadBalancers[?VpcId=='$VPC_ID'].LoadBalancerArn" --output text 2>/dev/null || true
@@ -129,21 +131,130 @@ aws_backstop() {
     log "waiting for load balancer ENIs to release..."
     sleep 15
   done
+}
 
-  # Sweep controller-managed security groups left behind by any force-deleted
-  # LBs (the graceful path deletes these itself). Best-effort — once the ENIs
-  # are gone these become deletable; if still referenced, VPC destroy retries.
+# ─── Phase 3: sweep the AWS Load Balancer Controller's security groups ────────
+# The controller creates security groups outside Terraform state and they
+# outlive a force-deleted load balancer:
+#   * per-ALB frontend SGs        tag elbv2.k8s.aws/cluster (+ ingress.k8s.aws/*
+#                                 for groups made by the legacy ingress controller)
+#   * the shared backend SG       name k8s-traffic-<cluster>-<hash>,
+#                                 tag elbv2.k8s.aws/resource=backend
+#   * per-service backend SGs     tag elbv2.k8s.aws/resource=<stack>/<resource>
+# Deleting them is not enough on its own: the controller also injects ingress
+# rules into the Terraform-managed *node* SGs that reference these groups, and
+# AWS refuses to delete a security group while another group's rule points at
+# it (DependencyViolation). So revoke every referencing rule first, then delete.
+
+# Security groups in the VPC that the LB controller owns. Scoped by VPC (one VPC
+# per cluster) plus controller-specific tag keys / the shared-backend name
+# prefix, so Terraform-managed node SGs are never matched.
+controller_sgs() {
+  {
+    aws_cli ec2 describe-security-groups \
+      --filters "Name=vpc-id,Values=$VPC_ID" \
+        "Name=tag-key,Values=elbv2.k8s.aws/cluster,elbv2.k8s.aws/resource,ingress.k8s.aws/cluster,ingress.k8s.aws/stack,ingress.k8s.aws/resource" \
+      --query "SecurityGroups[].GroupId" --output text 2>/dev/null || true
+    aws_cli ec2 describe-security-groups \
+      --filters "Name=vpc-id,Values=$VPC_ID" \
+        "Name=group-name,Values=k8s-traffic-$CLUSTER_NAME-*" \
+      --query "SecurityGroups[].GroupId" --output text 2>/dev/null || true
+  } | tr '[:space:]' '\n' | { grep -E '^sg-' || true; } | sort -u
+}
+
+# Every security group in the VPC — the search space for rules pointing at the
+# groups we're about to delete (describe-security-group-rules has no vpc-id
+# filter, so the group ids have to be passed explicitly).
+vpc_sg_ids() {
+  aws_cli ec2 describe-security-groups \
+    --filters "Name=vpc-id,Values=$VPC_ID" \
+    --query "SecurityGroups[].GroupId" --output text 2>/dev/null | tr '[:space:]' ',' | sed 's/,$//'
+}
+
+# Revoke every rule in the VPC (in any security group, including the node SGs)
+# that references $1, so the group becomes deletable.
+revoke_references_to() {
+  local target="$1" all="$2" group rule egress
+  [ -z "$all" ] && return 0
+  aws_cli ec2 describe-security-group-rules \
+    --filters "Name=group-id,Values=$all" \
+    --query "SecurityGroupRules[?ReferencedGroupInfo.GroupId=='$target'].[GroupId,SecurityGroupRuleId,IsEgress]" \
+    --output text 2>/dev/null | while read -r group rule egress; do
+      [ -z "$rule" ] && continue
+      # Self-references die with the group; only cross-group rules block it.
+      [ "$group" = "$target" ] && continue
+      log "  revoking rule $rule in $group (references $target)"
+      if [ "$egress" = "True" ]; then
+        aws_cli ec2 revoke-security-group-egress \
+          --group-id "$group" --security-group-rule-ids "$rule" >/dev/null 2>&1 || \
+          log "  warning: could not revoke $rule in $group"
+      else
+        aws_cli ec2 revoke-security-group-ingress \
+          --group-id "$group" --security-group-rule-ids "$rule" >/dev/null 2>&1 || \
+          log "  warning: could not revoke $rule in $group"
+      fi
+    done
+}
+
+# ENIs still holding the group — the other DependencyViolation cause. These
+# drain on their own once the load balancer is gone, hence the retry loop.
+sg_attachments() {
+  aws_cli ec2 describe-network-interfaces \
+    --filters "Name=group-id,Values=$1" \
+    --query "NetworkInterfaces[].[NetworkInterfaceId,Description]" --output text 2>/dev/null || true
+}
+
+sg_cleanup() {
   local sgs
-  sgs="$(aws_cli ec2 describe-security-groups \
-    --filters "Name=vpc-id,Values=$VPC_ID" "Name=tag-key,Values=elbv2.k8s.aws/cluster" \
-    --query "SecurityGroups[].GroupId" --output text 2>/dev/null || true)"
-  for sg in $sgs; do
-    log "deleting orphaned LB security group $sg"
-    aws_cli ec2 delete-security-group --group-id "$sg" 2>/dev/null || \
-      log "  $sg still in use; leaving for VPC destroy to retry"
+  sgs="$(controller_sgs)"
+  if [ -z "$sgs" ]; then
+    log "no controller-managed security groups in $VPC_ID"
+    return 0
+  fi
+  log "found controller-managed security groups: $(echo "$sgs" | tr '\n' ' ')"
+
+  local deadline=$(( $(date +%s) + 600 ))  # 10-minute cap
+  while :; do
+    local all remaining="" sg attached
+    all="$(vpc_sg_ids)"
+
+    for sg in $sgs; do
+      # Gone already (deleted by the controller on the graceful path, or by a
+      # previous pass) — nothing to do.
+      if ! aws_cli ec2 describe-security-groups --group-ids "$sg" >/dev/null 2>&1; then
+        continue
+      fi
+      revoke_references_to "$sg" "$all"
+      log "deleting security group $sg"
+      if aws_cli ec2 delete-security-group --group-id "$sg" >/dev/null 2>&1; then
+        continue
+      fi
+      attached="$(sg_attachments "$sg")"
+      if [ -n "$attached" ]; then
+        log "  $sg still attached to ENIs:"
+        echo "$attached" | while read -r eni desc; do log "    $eni ${desc:-}"; done
+      else
+        log "  $sg not deletable yet; will retry"
+      fi
+      remaining+="$sg"$'\n'
+    done
+
+    sgs="$(printf '%s' "$remaining" | grep -E '^sg-' || true)"
+    if [ -z "$sgs" ]; then
+      log "all controller-managed security groups deleted"
+      break
+    fi
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      log "warning: timed out deleting security groups: $(echo "$sgs" | tr '\n' ' ')"
+      log "warning: VPC destroy may fail — delete them manually if it does"
+      break
+    fi
+    log "waiting for security group dependencies to clear..."
+    sleep 15
   done
 }
 
 graceful_cleanup
 aws_backstop
+sg_cleanup
 log "done"

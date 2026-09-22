@@ -30,6 +30,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.35"
+    }
   }
 }
 
@@ -70,4 +74,16 @@ provider "helm" {
     client_certificate     = base64decode(local._cluster_kube.users[0].user["client-certificate-data"])
     client_key             = base64decode(local._cluster_kube.users[0].user["client-key-data"])
   }
+}
+
+# ─── Kubernetes provider ──────────────────────────────────────────────────────
+# Same credentials as the Helm provider. Used for the handful of plain objects
+# Terraform owns directly — namely the Cloudflare API token Secrets consumed by
+# cert-manager (DNS-01 solver) and external-dns, which no chart creates for us.
+
+provider "kubernetes" {
+  host                   = local._cluster_kube.clusters[0].cluster.server
+  cluster_ca_certificate = base64decode(local._cluster_kube.clusters[0].cluster["certificate-authority-data"])
+  client_certificate     = base64decode(local._cluster_kube.users[0].user["client-certificate-data"])
+  client_key             = base64decode(local._cluster_kube.users[0].user["client-key-data"])
 }

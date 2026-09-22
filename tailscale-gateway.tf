@@ -15,6 +15,19 @@ module "tailscale_gateway" {
   tailscale_auth_key = var.tailscale_auth_key
 }
 
+# Egress to the tailnet: send tailnet-bound traffic from the private subnets
+# through the gateway ENI instead of the NAT gateway. 100.64.0.0/10 is CGNAT
+# space and unroutable on the internet, so without this it dies at the NAT.
+# Cilium masquerades pod traffic to the node IP, so packets reach the VPC
+# router as ordinary private-subnet traffic and need no pod-CIDR route.
+resource "aws_route" "tailnet_egress" {
+  for_each = toset(module.vpc.private_route_table_ids)
+
+  route_table_id         = each.value
+  destination_cidr_block = var.tailnet_cidr
+  network_interface_id   = module.tailscale_gateway.network_interface_id
+}
+
 output "tailscale_gateway_info" {
   description = "Post-deploy DNS forwarding instructions for the Tailscale gateway."
   value       = module.tailscale_gateway.additional_info

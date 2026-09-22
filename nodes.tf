@@ -2,7 +2,7 @@ module "cluster_controlplane_nodes" {
   source         = "./modules/talos-node"
   cluster_name   = var.cluster_name
   node_role      = "controlplane"
-  instance_count = 3
+  instance_count = 1
 
   vpc_id     = module.vpc.vpc_id
   vpc_cidr   = module.vpc.vpc_cidr_block
@@ -29,7 +29,7 @@ module "cluster_worker_nodes" {
   source         = "./modules/talos-node"
   cluster_name   = var.cluster_name
   node_role      = "worker"
-  instance_count = 3
+  instance_count = 2
   min_size       = 2
   max_size       = 3
 
@@ -37,11 +37,11 @@ module "cluster_worker_nodes" {
   vpc_cidr   = module.vpc.vpc_cidr_block
   subnet_ids = module.vpc.private_subnets
 
-  longhorn_volume_size_gb = 10000
+  longhorn_volume_size_gb = 100
   root_volume_size_gb     = 100
 
   ami_id               = var.talos_worker_ami
-  instance_type        = "g4dn.xlarge"
+  instance_type        = "g6.2xlarge"
   talos_machine_config = base64encode(data.talos_machine_configuration.worker.machine_configuration)
 
   talos_api_allowed_cidrs = [module.vpc.vpc_cidr_block]

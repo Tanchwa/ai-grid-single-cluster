@@ -21,13 +21,19 @@ variable "cluster_name" {
   type        = string
 }
 
+variable "deploy_public_kubernetes_api" {
+  description = "Whether to deploy a public Kubernetes API endpoint. If false, the API will only be accessible via the private VPC endpoint."
+  type        = bool
+  default     = false
+}
+
 variable "domain_name" {
-  description = "Root DNS domain managed by Route 53 and filtered by external-dns (e.g. example.com)."
+  description = "Root DNS domain hosted in Cloudflare. Scopes the external-dns domain filter and the cert-manager DNS-01 solver (e.g. example.com)."
   type        = string
 }
 
 variable "cloudflare_api_token" {
-  description = "Cloudflare API token used by the cloudflare provider to manage DNS records in the domain_name zone. Needs Zone:Read and DNS:Edit on the zone."
+  description = "Cloudflare API token for the domain_name zone. Used by the cloudflare provider, by external-dns, and by the cert-manager DNS-01 solver. Needs Zone:Read and DNS:Edit on the zone."
   type        = string
   sensitive   = true
 }
@@ -170,4 +176,12 @@ variable "cilium_bgp_enabled" {
   description = "Enable Cilium BGP Control Plane and route advertisement. Actual peering requires CiliumBGPPeeringPolicy or CiliumBGPClusterConfig resources; safe to enable alongside AWS Load Balancer Controller."
   type        = bool
   default     = true
+}
+
+# ─── Tailscale ───────────────────────────────────────────────────────────────
+
+variable "tailnet_cidr" {
+  description = "Destination CIDR routed from the private subnets to the Tailscale gateway ENI. Defaults to the full CGNAT range so any tailnet device is reachable from the cluster; narrow to a /32 to expose a single device."
+  type        = string
+  default     = "100.64.0.0/10"
 }

@@ -36,7 +36,7 @@ repos:
     - id: check-merge-conflict
     - id: check-case-conflict
     - id: check-yaml
-      exclude: .*/templates/repo-secret.yaml # has a weird line that needs to remove quotes
+      exclude: (?<=/templates/).+$
     - id: check-json
     - id: check-toml
     - id: detect-private-key

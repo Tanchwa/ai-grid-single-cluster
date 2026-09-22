@@ -1,7 +1,11 @@
 ---
-# cert-manager ClusterIssuer using Route53 DNS-01 challenge.
-# The cert-manager ServiceAccount uses IRSA (no static credentials here);
-# the IAM role ARN is set on the ServiceAccount during the cert-manager Helm install.
+# cert-manager ClusterIssuer using the Cloudflare DNS-01 challenge.
+# Cloudflare is authoritative for the cluster's zone (see dns-zones.tf), so the
+# solver authenticates with an API token rather than a Route 53 IRSA role.
+#
+# The referenced Secret is created by Terraform in the cert-manager namespace
+# (cert-manager.tf) — a ClusterIssuer resolves secretRefs in the cert-manager
+# controller's own namespace, not in the namespace of the Certificate.
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -9,11 +13,15 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: "{{ .Values.letsencryptEmail }}"
+    email: "{{ required "letsencryptEmail is required" .Values.letsencryptEmail }}"
     privateKeySecretRef:
       name: letsencrypt-prod-key
     solvers:
       - dns01:
-          route53:
-            region: ap-east-2
-            hostedZoneID: "{{ .Values.route53ZoneId }}"
+          cloudflare:
+            apiTokenSecretRef:
+              name: "{{ .Values.cloudflareApiTokenSecretName }}"
+              key: "{{ .Values.cloudflareApiTokenSecretKey }}"
+        selector:
+          dnsZones:
+            - "{{ required "domainName is required" .Values.domainName }}"

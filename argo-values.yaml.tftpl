@@ -1,6 +1,7 @@
 server:
-  # Certificate is managed by the argo-bootstrap chart after install, which creates the cloudflare-dev
-  # ClusterIssuer and a Certificate CR targeting the argocd-server-tls secret. ArgoCD picks it up automatically.
+  # Certificate is managed by the argo-bootstrap chart after install, which creates the letsencrypt-prod
+  # ClusterIssuer (Cloudflare DNS-01) and a Certificate CR targeting the argocd-server-tls secret.
+  # ArgoCD picks that secret up automatically.
   certificate:
     enabled: false
 

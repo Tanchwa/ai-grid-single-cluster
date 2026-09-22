@@ -7,3 +7,11 @@ locals {
   # First controlplane IP — the single node talosctl bootstraps etcd on.
   cluster_bootstrap_ip = module.cluster_controlplane_nodes.instance_private_ips[0]
 }
+
+# Cloudflare API token Secret — same name/key in both the cert-manager and
+# external-dns namespaces so the ClusterIssuer and the external-dns env var
+# reference a single pair of constants.
+locals {
+  cloudflare_api_token_secret_name = "cloudflare-api-token" # pragma: allowlist secret
+  cloudflare_api_token_secret_key  = "api-token"            # pragma: allowlist secret
+}
