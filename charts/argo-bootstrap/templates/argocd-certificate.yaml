@@ -1,0 +1,21 @@
+---
+# TLS certificate for the ArgoCD server. argo-values.yaml.tftpl disables the
+# chart's own certificate (server.certificate.enabled=false) and ArgoCD reads
+# the argocd-server-tls Secret automatically when it exists, so cert-manager
+# owns issuance here.
+#
+# DNS-01 via the ClusterIssuer above, so the name does not need to be publicly
+# reachable for the challenge — the CNAME in dns-zones.tf only has to be in
+# place for clients.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: argocd-server-tls
+  namespace: argocd
+spec:
+  secretName: argocd-server-tls # pragma: allowlist secret
+  dnsNames:
+    - "{{ required "argocdDomain is required" .Values.argocdDomain }}"
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
